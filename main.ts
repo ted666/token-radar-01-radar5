@@ -1,14 +1,11 @@
-// A token-radar-01 entry (Node 22, standard library only).
+// Token Radar v5: rank pre-token protocols by an implied value fitted on live peers.
 //
-// The program reads the sealed snapshot from /input/snapshot.json (or --input <file|dir>), scores
-// every pre-token protocol with the model in lib/model.ts, writes the ranked board to
-// /output/board.json, and copies this repository's dashboard/ and screenshots/ to /output. Last, it
-// writes /output/dossier.json, the summary the judge reads, with the vendored make.fun library.
-//
-// The dashboard is a static page, no framework and no network: dashboard/index.html, dashboard/app.css
-// and dashboard/app.js read /output/data.js, which this program writes from the same board. The page
-// recomputes every row from the snapshot figures and shows the calibration the model was read from,
-// so the screenshots, the code and the board are visibly the same arithmetic.
+// The program reads the sealed snapshot from /input/snapshot.json (or --input <file|dir>),
+// fits a two-stage ridge model of log market-cap-per-TVL on the snapshot's live tokens,
+// scores every pre-token protocol with it, and writes the ranked board, the dashboard's
+// data, the dashboard and the dossier to the output directory. The dashboard and the
+// screenshots are copied verbatim; the dossier is built last from the finished output
+// directory, so it always describes exactly what was handed in.
 //
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts --input ../input/snapshot.json
@@ -69,7 +66,7 @@ function copyFiles(from: string, to: string): string[] {
   return copied;
 }
 
-const dashFiles = copyFiles(join(here, 'dashboard'), join(out, 'dashboard'));
+const dashboardFiles = copyFiles(join(here, 'dashboard'), join(out, 'dashboard'));
 const shots = copyFiles(join(here, 'screenshots'), join(out, 'screenshots'));
 if (shots.length < 3) {
   process.stderr.write(`token radar: screenshots/ holds ${shots.length} image${shots.length === 1 ? '' : 's'}: hand in 3, the board, a detail view and a filtered view\n`);
@@ -86,9 +83,13 @@ for (const name of shots) {
 writeFileSync(join(out, 'dossier.json'), buildDossier(out, { text_max_bytes: TEXT_MAX_BYTES, screenshots: SCREENSHOT_CAPS, dashboard: { max_files: 400, max_bytes: 4_194_304 } }));
 
 const top = board[0]!;
+const fit = radar.fit;
+const validation = radar.validation;
+// Four lines, all derived from the run itself: the coverage, the leader, the fit
+// (with its held-out lifts), and the files written. Nothing here is typed in.
 process.stdout.write(
   `token radar: ${snapshot.protocols.length} protocols, ${snapshot.watchlist.length} on the watchlist, ${board.length} rows scored (${radar.early_size} early, ${radar.live_size} live set aside)\n` +
-    `token radar: rank 1 is ${top.name} at $${top.implied_value_usd.toLocaleString('en-US')} implied (${top.category ?? 'no category'}, multiple ${top.model.category_multiple} from ${top.model.category_multiple_source})\n` +
-    `token radar: fitted on ${radar.fit.live_count} live tokens: log-ratio intercept ${radar.fit.intercept}, logTVL ${radar.fit.logtvl}, growth ${radar.fit.growth}, rise ${radar.fit.rise}, fall ${radar.fit.fall}, chains ${radar.fit.chains}; held out leave-one-out ${radar.validation.loo.lift_vs_radar4.toFixed(2)}x the hand-set model, walk-forward ${radar.validation.walk_forward.lift_vs_radar4.toFixed(2)}x\n` +
-    `token radar: wrote ${join(out, 'board.json')}, ${join(out, 'data.js')}, ${join(out, 'dashboard')} (${dashFiles.length} files), ${join(out, 'screenshots')} (${shots.length} images) and ${join(out, 'dossier.json')}\n`,
+    `token radar: rank 1 is ${top.name} at $${top.implied_value_usd.toLocaleString('en-US')} implied (${top.category}, multiple ${top.model.category_multiple} from ${top.model.category_multiple_source})\n` +
+    `token radar: fitted on ${fit.live_count} live tokens: log-ratio intercept ${fit.intercept.toFixed(4)}, logTVL ${fit.logtvl.toFixed(4)}, growth ${fit.growth.toFixed(4)}, rise ${fit.rise.toFixed(4)}, fall ${fit.fall.toFixed(4)}, chains ${fit.chains.toFixed(4)}; held out leave-one-out ${validation.loo.lift_vs_radar4.toFixed(2)}x the hand-set model, walk-forward ${validation.walk_forward.lift_vs_radar4.toFixed(2)}x\n` +
+    `token radar: wrote ${join(out, 'board.json')}, ${join(out, 'data.js')}, ${join(out, 'dashboard')} (${dashboardFiles.length} files), ${join(out, 'screenshots')} (${shots.length} images) and ${join(out, 'dossier.json')}\n`,
 );
