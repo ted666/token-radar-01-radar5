@@ -103,5 +103,19 @@ export function verifyBoard(board: BoardRow[], snapshot: Snapshot): ReportCheck[
     passed: badSteps === undefined,
     detail: badSteps === undefined ? `every row carries a farm plan inside the limits` : `${badSteps.slug} carries ${badSteps.farm_steps.length} steps`,
   });
+  const slugCounts = new Map<string, number>();
+  for (const r of board) slugCounts.set(r.slug, (slugCounts.get(r.slug) ?? 0) + 1);
+  const repeated = [...slugCounts.entries()].find(([, n]) => n > 1);
+  checks.push({
+    name: 'no slug appears twice',
+    passed: repeated === undefined,
+    detail: repeated === undefined ? `all ${board.length} slugs are distinct` : `${repeated[0]} appears ${repeated[1]} times`,
+  });
+  const traded = board.find((r) => r.mcap_usd !== null && r.mcap_usd > 0);
+  checks.push({
+    name: 'every row is pre-token',
+    passed: traded === undefined,
+    detail: traded === undefined ? `no row carries a traded market cap, so the board never ranks a token that already trades` : `${traded.slug} carries a market cap of $${traded.mcap_usd!.toLocaleString('en-US')}`,
+  });
   return checks;
 }
