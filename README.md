@@ -17,3 +17,22 @@ mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts --input /input/snapshot.json
 ## The model
 
 Stage 1 fits one shrunk mean log ratio per category; stage 2 is a ridge regression of the residual on log TVL, growth, rise and fall of age, and extra chains. Held-out on the live tokens: leave-one-out 1.33x the hand-set model and 1.18x TVL-only (3.54 vs 4.70 vs 4.18 MSE); walk-forward 1.28x / 1.19x; five-fold 1.32x / 1.24x. The log ratio is noisy (in-sample R² 0.23), so the model ranks launches better than it prices them. Every farm plan is costed to an eleventh verdict step: total gas, hours of attention, implied value per $1 of capital, minimum viable capital, and whether the plan clears it.
+
+## What the run checks
+
+The board is checked twice before anything is written: `boardIssue` in
+`lib/model.ts` enforces the gate's invariants, and `verifyBoard` in
+`lib/report.ts` re-checks them independently — watchlist coverage, ranks
+1 to N with no gap, implied value non-increasing down the board, positive
+whole-dollar values, and farm plans of 3 to 12 steps of 20 to 600
+characters. The two passes have to agree; a single failing check refuses
+the board outright instead of handing in a ranking that breaks its own
+rules.
+
+## Reading the board
+
+The dashboard sorts and filters by category, chain and watchlist, and
+every row opens a detail view with the six fitted factors, the
+recomputation of its implied value, and the costed farm plan. The header
+strip names the model version, the live-token count and the held-out
+lifts, so the screenshots and the code behind them always agree.
