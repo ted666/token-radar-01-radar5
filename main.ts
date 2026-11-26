@@ -14,6 +14,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSyn
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { boardIssue, buildRadar, dataScript, parseSnapshot } from './lib/model.ts';
+import { summarizeRun, verifyBoard } from './lib/report.ts';
 import { buildDossier } from './vendor/makefun-board.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
@@ -44,6 +45,13 @@ const { board, radar } = buildRadar(snapshot);
 const issue = boardIssue(board, snapshot);
 if (issue !== null) {
   process.stderr.write(`token radar: the model wrote a board the gate refuses: ${issue}\n`);
+  process.exit(1);
+}
+// A second, independent pass over the same invariants: two checks have to
+// agree before a board is written anywhere.
+const failed = verifyBoard(board, snapshot).filter((c) => !c.passed);
+if (failed.length > 0) {
+  process.stderr.write(`token radar: the board fails its second check: ${failed.map((c) => c.name).join(', ')}\n`);
   process.exit(1);
 }
 
@@ -82,14 +90,6 @@ for (const name of shots) {
 // The dossier is written last: the scorer rebuilds it from this /output and compares bytes.
 writeFileSync(join(out, 'dossier.json'), buildDossier(out, { text_max_bytes: TEXT_MAX_BYTES, screenshots: SCREENSHOT_CAPS, dashboard: { max_files: 400, max_bytes: 4_194_304 } }));
 
-const top = board[0]!;
-const fit = radar.fit;
-const validation = radar.validation;
 // Four lines, all derived from the run itself: the coverage, the leader, the fit
 // (with its held-out lifts), and the files written. Nothing here is typed in.
-process.stdout.write(
-  `token radar: ${snapshot.protocols.length} protocols, ${snapshot.watchlist.length} on the watchlist, ${board.length} rows scored (${radar.early_size} early, ${radar.live_size} live set aside)\n` +
-    `token radar: rank 1 is ${top.name} at $${top.implied_value_usd.toLocaleString('en-US')} implied (${top.category}, multiple ${top.model.category_multiple} from ${top.model.category_multiple_source})\n` +
-    `token radar: fitted on ${fit.live_count} live tokens: log-ratio intercept ${fit.intercept.toFixed(4)}, logTVL ${fit.logtvl.toFixed(4)}, growth ${fit.growth.toFixed(4)}, rise ${fit.rise.toFixed(4)}, fall ${fit.fall.toFixed(4)}, chains ${fit.chains.toFixed(4)}; held out leave-one-out ${validation.loo.lift_vs_radar4.toFixed(2)}x the hand-set model, walk-forward ${validation.walk_forward.lift_vs_radar4.toFixed(2)}x\n` +
-    `token radar: wrote ${join(out, 'board.json')}, ${join(out, 'data.js')}, ${join(out, 'dashboard')} (${dashboardFiles.length} files), ${join(out, 'screenshots')} (${shots.length} images) and ${join(out, 'dossier.json')}\n`,
-);
+process.stdout.write(summarizeRun(snapshot, board, radar, out, dashboardFiles, shots).join('\n') + '\n');
