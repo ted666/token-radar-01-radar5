@@ -36,3 +36,14 @@ every row opens a detail view with the six fitted factors, the
 recomputation of its implied value, and the costed farm plan. The header
 strip names the model version, the live-token count and the held-out
 lifts, so the screenshots and the code behind them always agree.
+
+## Reproducing the run
+
+The entry is deterministic: the same snapshot always produces the same
+bytes. To reproduce the handed-in output, run `main.ts` against the
+sealed snapshot and compare the directory with a fresh `diff -r` — the
+board, the dashboard data, the dashboard files, the screenshots and the
+dossier all match byte for byte. The gate script in the kit checks the
+same eight invariants the submission is graded on: dashboard files,
+board shape, ordering, watchlist coverage, farm steps, screenshots,
+dossier bytes and page-versus-board agreement.
