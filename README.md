@@ -16,4 +16,4 @@ mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts --input /input/snapshot.json
 
 ## The model
 
-Stage 1 fits one shrunk mean log ratio per category; stage 2 is a ridge regression of the residual on log TVL, growth, rise and fall of age, and extra chains. Held-out on the live tokens: leave-one-out 1.33x the hand-set model and 1.18x TVL-only (3.54 vs 4.70 vs 4.18 MSE); walk-forward 1.28x / 1.19x; five-fold 1.32x / 1.24x. The log ratio is noisy (in-sample R² 0.23), so the model ranks launches better than it prices them.
+Stage 1 fits one shrunk mean log ratio per category; stage 2 is a ridge regression of the residual on log TVL, growth, rise and fall of age, and extra chains. Held-out on the live tokens: leave-one-out 1.33x the hand-set model and 1.18x TVL-only (3.54 vs 4.70 vs 4.18 MSE); walk-forward 1.28x / 1.19x; five-fold 1.32x / 1.24x. The log ratio is noisy (in-sample R² 0.23), so the model ranks launches better than it prices them. Every farm plan is costed to an eleventh verdict step: total gas, hours of attention, implied value per $1 of capital, minimum viable capital, and whether the plan clears it.
